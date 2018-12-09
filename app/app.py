@@ -1,8 +1,8 @@
-from datetime import datetime, timedelta, date, time
+from datetime import datetime, timedelta, time
 from flask import Flask, redirect, render_template, request, g, jsonify
 from app.services.google_calendar import GoogleCalendarService
-from app.database import get_db
-from pytz import timezone, utc
+from app.database import get_db, save_appointment, get_appointment_by_gcal_event_id
+from pytz import timezone
 from collections import defaultdict
 
 app = Flask(__name__)
@@ -47,6 +47,30 @@ def handle_google_auth():
     code = auth_data['code']
     gcal.exchange_url_for_token(code)
     return 'We did it'
+
+
+@app.route('/create_appointment', methods=['POST'])
+def create_appointment():
+    # TODO: Specify which field is missing
+    required_fields = ['name', 'phone_number', 'insurance', 'start_dt', 'end_dt']
+    if any([f not in request.json for f in required_fields]):
+        return '', 400
+
+    name = request.json['name']
+    phone_number = request.json['phone_number']
+    insurance = request.json['insurance']
+    start_dt = request.json['start_dt']
+    end_dt = request.json['end_dt']
+
+    title = f'Appointment for {name}'
+    description = f'Call them at {phone_number}. Confirmed insurance is {insurance}'
+    event_id = gcal.create_calendar_event(start_dt, end_dt, title, description)
+
+    # TODO: Ideally save appointment just returns the dict
+    save_appointment(start_dt, end_dt, name, phone_number, insurance, event_id)
+    appointment = get_appointment_by_gcal_event_id(event_id)
+
+    return jsonify({'id': appointment['id']})
 
 
 @app.route('/available_slots')

@@ -47,13 +47,7 @@ class GoogleCalendarService():
 
     def get_user_creds(self, user_id: int):
         query = 'select * from google_credentials where id=?'
-        credentials = query_db(query, [user_id], one=True)
-        return credentials
-
-    def get_busy_slots_for_range(self, start_ms, end_ms):
-        ret = {}
-        # Get credentials for query
-        db_creds = self.get_user_creds(3)
+        db_creds = query_db(query, [user_id], one=True)
         credentials = Credentials(
             token=db_creds['token'],
             refresh_token=db_creds['refresh_token'],
@@ -62,11 +56,31 @@ class GoogleCalendarService():
             client_secret=db_creds['client_secret'],
             scopes=json.loads(db_creds['scopes']),
         )
+        return credentials
+
+    def create_calendar_event(self, start_dt, end_dt, title, description) -> str:
+        service = googleapiclient.discovery.build('calendar', 'v3', credentials=self.get_user_creds(3))
+        body = {
+            'start': {
+                'dateTime': start_dt,
+            },
+            'end': {
+                'dateTime': end_dt,
+            },
+            'summary': title,
+            'description': description
+        }
+        ret = service.events().insert(calendarId='primary', body=body).execute()
+        print(ret)
+        return ret['id']
+
+    def get_busy_slots_for_range(self, start_ms, end_ms):
+        ret = {}
 
         # Query params
         start = datetime.utcfromtimestamp(start_ms).isoformat() + 'Z'
         end = datetime.utcfromtimestamp(end_ms).isoformat() + 'Z'
-        service = googleapiclient.discovery.build('calendar', 'v3', credentials=credentials)
+        service = googleapiclient.discovery.build('calendar', 'v3', credentials=self.get_user_creds(3))
 
         body = {
             'timeMin': start,
@@ -74,7 +88,6 @@ class GoogleCalendarService():
             'items': [{'id': 'primary'}],
         }
         freebusy = service.freebusy().query(body=body).execute()
-        print(freebusy)
         busy_slots = freebusy['calendars']['primary']['busy']
 
         # parse busy slots into dt objects
