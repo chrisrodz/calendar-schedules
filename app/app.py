@@ -1,8 +1,24 @@
-from flask import Flask, redirect, render_template, request
+from flask import Flask, redirect, render_template, request, g
 from app.services.google_calendar import GoogleCalendarService
-app = Flask(__name__)
+from app.database import get_db
 
+app = Flask(__name__)
 gcal = GoogleCalendarService()
+
+
+def init_db():
+    with app.app_context():
+        db = get_db()
+        with app.open_resource('schema.sql', mode='r') as f:
+            db.cursor().executescript(f.read())
+        db.commit()
+
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
 
 
 @app.route('/')
@@ -20,6 +36,5 @@ def auth():
 def handle_google_auth():
     auth_data = request.args
     code = auth_data['code']
-    credentials = gcal.exchange_url_for_token(code)
-    print(credentials)
+    gcal.exchange_url_for_token(code)
     return 'We did it'
