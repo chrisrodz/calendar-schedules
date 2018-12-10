@@ -24,8 +24,8 @@ This app supports the following API requests
 `GET /available_slots` - Displays available appointment slots for given time range
 
 Params:
-start_ms: int - Start time for available slots check
-end_ms: int - End time for available slots check
+- start_ms: **int** - Start time for available slots check
+- end_ms: **int** - End time for available slots check
 
 Returns:
 An object of the form:
@@ -97,22 +97,23 @@ Example:
 `POST /create_appointment` - Create a new appointment for a given time. This also creates an appointment in the connected calendar
 
 Params:
-start_ms: int - Start time of the appointment in epoch seconds
-end_ms: int - End time of the appointment in epoch seconds
-name: str - Patient's name
-phone_number: str - Patient's phone number
-insurance: str - Patient's insurance
+- start_ms: **int** - Start time of the appointment in epoch seconds
+- end_ms: **int** - End time of the appointment in epoch seconds
+- name: **str** - Patient's name
+- phone_number: **str** - Patient's phone number
+- insurance: **str** - Patient's insurance
 
 Returns:
+```
 {
-    'id': int
+    'id': integer. The appointment id
 }
-
+```
 
 `PUT /confirm_appointment` - Confirm an appointment. This updates the google calendar event to show that the appointment is confirmed
 
 Params:
-appointment_id: int - The id of the appointment to confirm
+- appointment_id: **int** - The id of the appointment to confirm
 
 Returns an empty 201 response on success
 
@@ -120,7 +121,7 @@ Returns an empty 201 response on success
 `PUT /cancel_appointment` - Delete an appointment. This deletes the associated google calendar event
 
 Params:
-appointment_id: int - The id of the appointment to cancel
+- appointment_id: **int** - The id of the appointment to cancel
 
 Returns an empty 201 response on success
 
