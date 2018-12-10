@@ -1,5 +1,6 @@
 import sqlite3
 from flask import g
+from typing import Dict, Any
 
 DATABASE = 'schedules.db'
 
@@ -25,14 +26,34 @@ def query_db(query, args=(), one=False):
     return (rv[0] if rv else None) if one else rv
 
 
-def save_appointment(start_dt, end_dt, name, phone_number, insurance, gcal_event_id):
-    query = 'insert into appointments (start_dt, end_dt, name, phone_number, insurance, gcal_event_id, is_confirmed, is_canceled) values (?, ?, ?, ?, ?, ?, 0, 0)'
-    values = [start_dt, end_dt, name, phone_number, insurance, gcal_event_id]
+def save_appointment(start_ms, end_ms, name, phone_number, insurance, gcal_event_id):
+    query = 'insert into appointments (start_ms, end_ms, name, phone_number, insurance, gcal_event_id, is_confirmed, is_canceled) values (?, ?, ?, ?, ?, ?, 0, 0)'
+    values = [start_ms, end_ms, name, phone_number, insurance, gcal_event_id]
     query_db(query, values)
     return True
 
 
-def get_appointment_by_gcal_event_id(gcal_event_id):
+def get_appointment_by_gcal_event_id(gcal_event_id: str) -> Dict[str, Any]:
     query = 'select * from appointments where gcal_event_id = ?'
     values = [gcal_event_id]
     return query_db(query, values, one=True)
+
+
+def get_appointment_by_id(appointment_id: int) -> Dict[str, Any]:
+    query = 'select * from appointments where id = ?'
+    values = [appointment_id]
+    return query_db(query, values, one=True)
+
+
+def confirm_appointment(appointment_id: int) -> bool:
+    query = 'update appointments set is_confirmed = 1 where id = ?'
+    values = [appointment_id]
+    query_db(query, values)
+    return True
+
+
+def cancel_appointment(appointment_id: int) -> bool:
+    query = 'update appointments set is_canceled = 1 where id = ?'
+    values = [appointment_id]
+    query_db(query, values)
+    return True

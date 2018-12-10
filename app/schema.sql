@@ -13,8 +13,8 @@ DROP TABLE IF EXISTS appointments;
 
 CREATE TABLE appointments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  start_dt TEXT NOT NULL,
-  end_dt TEXT NOT NULL,
+  start_ms TEXT NOT NULL,
+  end_ms TEXT NOT NULL,
   name TEXT NOT NULL,
   phone_number TEXT NOT NULL,
   insurance TEXT NOT NULL,

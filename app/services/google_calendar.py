@@ -11,6 +11,7 @@ from app.database import query_db
 # TODO: We'll make this the timezone of the calendar
 TZ = timezone('America/Los_Angeles')
 
+
 class GoogleCalendarService():
     def __init__(self):
         scopes = [
@@ -58,23 +59,24 @@ class GoogleCalendarService():
         )
         return credentials
 
-    def create_calendar_event(self, start_dt, end_dt, title, description) -> str:
+    def create_calendar_event(self, start_ms, end_ms, title, description) -> str:
+        start_dt = utc.localize(datetime.utcfromtimestamp(start_ms)).astimezone(TZ)
+        end_dt = utc.localize(datetime.utcfromtimestamp(end_ms)).astimezone(TZ)
         service = googleapiclient.discovery.build('calendar', 'v3', credentials=self.get_user_creds(3))
         body = {
             'start': {
-                'dateTime': start_dt,
+                'dateTime': start_dt.isoformat(),
             },
             'end': {
-                'dateTime': end_dt,
+                'dateTime': end_dt.isoformat(),
             },
             'summary': title,
             'description': description
         }
         ret = service.events().insert(calendarId='primary', body=body).execute()
-        print(ret)
         return ret['id']
 
-    def get_busy_slots_for_range(self, start_ms, end_ms):
+    def get_busy_slots_for_range(self, start_ms: int, end_ms: int) -> Dict[date, Any]:
         ret = {}
 
         # Query params
@@ -109,5 +111,24 @@ class GoogleCalendarService():
 
         return ret
 
-    def is_time_in_busy_slots(self, start_dt, end_dt) -> bool:
-        pass
+    def is_time_in_busy_slots(self, start_ms, end_ms) -> bool:
+        busy_slots = self.get_busy_slots_for_range(start_ms, end_ms)
+
+        start_dt = utc.localize(datetime.utcfromtimestamp(start_ms)).astimezone(TZ)
+        end_dt = utc.localize(datetime.utcfromtimestamp(end_ms)).astimezone(TZ)
+
+        for _, slots in busy_slots.items():
+            for slot in slots:
+                if dates_overlap(slot['start'], slot['end'], start_dt, end_dt):
+                    return True
+
+        return False
+
+
+def dates_overlap(start_dt1, end_dt1, start_dt2, end_dt2):
+    if start_dt2 <= start_dt1 <= end_dt2:
+        return True
+    elif start_dt2 <= end_dt1 <= end_dt2:
+        return True
+
+    return False

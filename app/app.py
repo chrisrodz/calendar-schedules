@@ -1,7 +1,12 @@
 from datetime import datetime, timedelta, time
 from flask import Flask, redirect, render_template, request, g, jsonify
 from app.services.google_calendar import GoogleCalendarService
-from app.database import get_db, save_appointment, get_appointment_by_gcal_event_id
+from app.database import get_db
+from app.database import save_appointment
+from app.database import get_appointment_by_gcal_event_id
+from app.database import get_appointment_by_id
+from app.database import confirm_appointment as db_confirm_appointment
+from app.database import cancel_appointment as db_cancel_appointment
 from pytz import timezone
 from collections import defaultdict
 
@@ -31,7 +36,7 @@ def close_connection(exception):
 
 
 @app.route('/')
-def hello_world():
+def index():
     return render_template('index.html')
 
 
@@ -51,26 +56,63 @@ def handle_google_auth():
 
 @app.route('/create_appointment', methods=['POST'])
 def create_appointment():
-    # TODO: Specify which field is missing
-    required_fields = ['name', 'phone_number', 'insurance', 'start_dt', 'end_dt']
+    required_fields = ['name', 'phone_number', 'insurance', 'start_ms', 'end_ms']
     if any([f not in request.json for f in required_fields]):
-        return '', 400
+        return jsonify({'error': 'missing required params'}), 400
 
     name = request.json['name']
     phone_number = request.json['phone_number']
     insurance = request.json['insurance']
-    start_dt = request.json['start_dt']
-    end_dt = request.json['end_dt']
+    start_ms = request.json['start_ms']
+    end_ms = request.json['end_ms']
 
     title = f'Appointment for {name}'
     description = f'Call them at {phone_number}. Confirmed insurance is {insurance}'
-    event_id = gcal.create_calendar_event(start_dt, end_dt, title, description)
 
-    # TODO: Ideally save appointment just returns the dict
-    save_appointment(start_dt, end_dt, name, phone_number, insurance, event_id)
+    if gcal.is_time_in_busy_slots(start_ms, end_ms):
+        return jsonify({'error': 'Time in busy slots'}), 400
+
+    event_id = gcal.create_calendar_event(start_ms, end_ms, title, description)
+
+    save_appointment(start_ms, end_ms, name, phone_number, insurance, event_id)
     appointment = get_appointment_by_gcal_event_id(event_id)
 
     return jsonify({'id': appointment['id']})
+
+
+@app.route('/confirm_appointment', methods=['PUT'])
+def confirm_appointment():
+    if 'appointment_id' not in request.json:
+        return jsonify({'error': 'missing appointment_id'}), 400
+
+    appointment_id = request.json['appointment_id']
+    appointment = get_appointment_by_id(appointment_id)
+
+    if appointment['is_confirmed']:
+        return jsonify({'error': 'Appointment already confirmed'}), 400
+
+    if appointment['is_canceled']:
+        return jsonify({'error': 'Cannot confirm a canceled appointment'}), 400
+
+    db_confirm_appointment(appointment_id)
+
+    return '', 201
+
+
+@app.route('/cancel_appointment', methods=['PUT'])
+def cancel_appointment():
+    if 'appointment_id' not in request.json:
+        return jsonify({'error': 'missing appointment_id'}), 400
+
+    appointment_id = request.json['appointment_id']
+    appointment = get_appointment_by_id(appointment_id)
+
+    if appointment['is_canceled']:
+        return jsonify({'error': 'Appointment already canceled'}), 400
+
+    db_cancel_appointment(appointment_id)
+
+    return '', 201
 
 
 @app.route('/available_slots')
