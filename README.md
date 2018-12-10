@@ -1,5 +1,12 @@
 # calendar-schedules
 
+## TODOs
+
+- [ ] Authentication flow is tied to a single user and is not production-ready
+- [ ] Should get user's timezone after authentication and use it instead of defaulting to PST
+- [ ] Should have error handling around db operations
+- [ ] Need to clean up code a bit (function names, some methods could be broken down)
+
 ## Installation
 
 This assumes that you have setup a valid Google App with a redirect_uri set to `http://localhost:8080/google_auth` and have a corresponding `client_secret.json` file in the top-level directory of this repo. Assuming you have virtualenv installed and have cloned the repository run the following to bootstrap the db:
