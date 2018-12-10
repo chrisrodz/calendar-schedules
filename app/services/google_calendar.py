@@ -31,7 +31,7 @@ class GoogleCalendarService():
         authorization_url, state = self.flow.authorization_url(access_type='offline', include_granted_scopes='true')
         return authorization_url, state
 
-    def exchange_url_for_token(self, code):
+    def exchange_url_for_token(self, code: str) -> bool:
         self.flow.fetch_token(code=code)
         credentials = self.flow.credentials
         query = 'insert into google_credentials (token,refresh_token,token_uri,client_id,client_secret,scopes) values (?, ?, ?, ?, ?, ?)'
@@ -44,7 +44,7 @@ class GoogleCalendarService():
             json.dumps(credentials.scopes)
         ]
         query_db(query, values)
-        return credentials
+        return True
 
     def get_user_creds(self):
         query = 'select * from google_credentials where id=1'
@@ -59,7 +59,7 @@ class GoogleCalendarService():
         )
         return credentials
 
-    def create_calendar_event(self, start_ms, end_ms, title, description) -> str:
+    def create_calendar_event(self, start_ms: int, end_ms: int, title: str, description: str) -> str:
         start_dt = utc.localize(datetime.utcfromtimestamp(start_ms)).astimezone(TZ)
         end_dt = utc.localize(datetime.utcfromtimestamp(end_ms)).astimezone(TZ)
         service = googleapiclient.discovery.build('calendar', 'v3', credentials=self.get_user_creds())
@@ -122,7 +122,7 @@ class GoogleCalendarService():
 
         return ret
 
-    def is_time_in_busy_slots(self, start_ms, end_ms) -> bool:
+    def is_time_in_busy_slots(self, start_ms: int, end_ms: int) -> bool:
         busy_slots = self.get_busy_slots_for_range(start_ms, end_ms)
 
         start_dt = utc.localize(datetime.utcfromtimestamp(start_ms)).astimezone(TZ)
