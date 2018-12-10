@@ -40,7 +40,7 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/auth')
+@app.route('/auth', methods=['GET'])
 def auth():
     authorization_url, state = gcal.get_authorization_url()
     return redirect(authorization_url)
@@ -51,7 +51,7 @@ def handle_google_auth():
     auth_data = request.args
     code = auth_data['code']
     gcal.exchange_url_for_token(code)
-    return 'We did it'
+    return 'Successfully authed'
 
 
 @app.route('/create_appointment', methods=['POST'])
@@ -94,6 +94,9 @@ def confirm_appointment():
     if appointment['is_canceled']:
         return jsonify({'error': 'Cannot confirm a canceled appointment'}), 400
 
+    name = appointment['name']
+    title = f'(Confirmed) Appointment for {name}'
+    gcal.confirm_calendar_event(appointment['gcal_event_id'], title)
     db_confirm_appointment(appointment_id)
 
     return '', 201
@@ -110,6 +113,7 @@ def cancel_appointment():
     if appointment['is_canceled']:
         return jsonify({'error': 'Appointment already canceled'}), 400
 
+    gcal.remove_calendar_event(appointment['gcal_event_id'])
     db_cancel_appointment(appointment_id)
 
     return '', 201

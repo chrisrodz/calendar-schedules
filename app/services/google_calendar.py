@@ -46,9 +46,9 @@ class GoogleCalendarService():
         query_db(query, values)
         return credentials
 
-    def get_user_creds(self, user_id: int):
-        query = 'select * from google_credentials where id=?'
-        db_creds = query_db(query, [user_id], one=True)
+    def get_user_creds(self):
+        query = 'select * from google_credentials where id=1'
+        db_creds = query_db(query, one=True)
         credentials = Credentials(
             token=db_creds['token'],
             refresh_token=db_creds['refresh_token'],
@@ -62,7 +62,7 @@ class GoogleCalendarService():
     def create_calendar_event(self, start_ms, end_ms, title, description) -> str:
         start_dt = utc.localize(datetime.utcfromtimestamp(start_ms)).astimezone(TZ)
         end_dt = utc.localize(datetime.utcfromtimestamp(end_ms)).astimezone(TZ)
-        service = googleapiclient.discovery.build('calendar', 'v3', credentials=self.get_user_creds(3))
+        service = googleapiclient.discovery.build('calendar', 'v3', credentials=self.get_user_creds())
         body = {
             'start': {
                 'dateTime': start_dt.isoformat(),
@@ -76,13 +76,24 @@ class GoogleCalendarService():
         ret = service.events().insert(calendarId='primary', body=body).execute()
         return ret['id']
 
+    def confirm_calendar_event(self, event_id: str, title: str) -> bool:
+        body = {'summary': title}
+        service = googleapiclient.discovery.build('calendar', 'v3', credentials=self.get_user_creds())
+        service.events().patch(calendarId='primary', eventId=event_id, body=body).execute()
+        return True
+
+    def remove_calendar_event(self, event_id: str) -> bool:
+        service = googleapiclient.discovery.build('calendar', 'v3', credentials=self.get_user_creds())
+        service.events().delete(calendarId='primary', eventId=event_id).execute()
+        return True
+
     def get_busy_slots_for_range(self, start_ms: int, end_ms: int) -> Dict[date, Any]:
         ret = {}
 
         # Query params
         start = datetime.utcfromtimestamp(start_ms).isoformat() + 'Z'
         end = datetime.utcfromtimestamp(end_ms).isoformat() + 'Z'
-        service = googleapiclient.discovery.build('calendar', 'v3', credentials=self.get_user_creds(3))
+        service = googleapiclient.discovery.build('calendar', 'v3', credentials=self.get_user_creds())
 
         body = {
             'timeMin': start,
