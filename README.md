@@ -6,6 +6,7 @@
 - [ ] Should get user's timezone after authentication and use it instead of defaulting to PST
 - [ ] Should have error handling around db operations
 - [ ] Need to clean up code a bit (function names, some methods could be broken down)
+- [ ] Unit tests
 
 ## Installation
 
@@ -22,7 +23,7 @@ Now run the following to run the application:
 flask run
 ```
 
-You should be able to visit http://localhost:8080 and to authenticate
+You should be able to visit http://localhost:8080 and to authenticate. After successfully authenticating you should be able to make API requests.
 
 ## API Requests
 
@@ -132,3 +133,29 @@ Params:
 
 Returns an empty 201 response on success
 
+
+### Example requests
+
+```
+Request to see available slots for 12/10/2018 8AM to 12/15/2018 8AM
+curl -X GET 'http://localhost:8080/available_slots?start_ms=1544428800&end_ms=1544860800'
+
+Request to create an appointment from 12/13/2018 2PM to 12/13/2018 3PM
+curl -d '{"start_ms": 1544738400, "end_ms": 1544742000,"name": "Christian Rodriguez","phone_number": "787-566-3317","insurance": "Triple SSS"}' -H "Content-Type: application/json" -X POST http://localhost:8080/create_appointment
+
+Confirm the appointment we just created
+curl -d '{"appointment_id": 1}' -H "Content-Type: application/json" -X PUT http://localhost:8080/confirm_appointment
+
+Cancel the appointment we just created
+curl -d '{"appointment_id": 1}' -H "Content-Type: application/json" -X PUT http://localhost:8080/cancel_appointment
+
+Create a second appointment with the same time slot
+curl -d '{"start_ms": 1544738400, "end_ms": 1544742000,"name": "Christian Rodriguez","phone_number": "787-566-3317","insurance": "Triple SSS"}' -H "Content-Type: application/json" -X POST http://localhost:8080/create_appointment
+
+
+Cancel the second appointment
+curl -d '{"appointment_id": 2}' -H "Content-Type: application/json" -X PUT http://localhost:8080/cancel_appointment
+
+Confirm the second appointment. This will fail because the appointment has been canceled
+curl -d '{"appointment_id": 2}' -H "Content-Type: application/json" -X PUT http://localhost:8080/confirm_appointment
+```
